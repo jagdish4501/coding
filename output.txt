@@ -1,1 +1,3 @@
-hello typescript
+12
+6
+qwerty

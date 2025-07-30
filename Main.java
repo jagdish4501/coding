@@ -1,245 +1,205 @@
+import static java.lang.Math.*;
 import java.util.*;
 import java.io.*;
 
 public class Main {
-    public static void main(String[] args) {
-        
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StringTokenizer st = new StringTokenizer(br.readLine());
+        String s = st.nextToken();
+        int[] pi = StringProcessing.prefixFunction(s);
+        boolean flag = false;
+        int n=pi.length;
+        int l=pi[n-1];
+        while(!flag && l>0){
+            System.out.println(l);
+            for (int i = 0; i < pi.length - 1; i++)
+                if (pi[i] == l){
+                    flag = true;
+                    break;
+                }
+            if(flag==false)l=pi[l-1];
+        }
+        if (flag)
+            System.out.println(s.substring(0, l));
+        else
+            System.out.println("Just a legend");
     }
 }
 
-class Io {
-    static final Scanner sc = new Scanner(System.in);
-    private static final BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-    private static final PrintWriter out = new PrintWriter(System.out);
-    private static StringTokenizer st;
-    public static void out(Object o) {
-        out.print(o);
-    }
-    public static void outln(Object o) {
-        out.println(o);
-    }
-    public static void flush() {
-        out.flush();
-    }
-    private static String nextToken() throws IOException {
-        while (st == null || !st.hasMoreTokens()) {
-            String line = br.readLine();
-            if (line == null)
-                return null;
-            st = new StringTokenizer(line);
+class StringProcessing {
+
+    public static long polyRollHash(String s) {
+        // polynomial rolling hash function
+        // hash=s[0]*p^0 + s[1]*p^1 + s[2]*p^2 + ..... mod m
+        // n-1
+        // hash= ∑ s[i]*p^i mod m
+        // i=0
+        // hash of substring
+        // j
+        // hash[i..j]=∑ s[k]*p^(k-i) mod m
+        // k=i
+        // hash[i..j]*p^i = s[i]*p^k + s[i+1]*p^(i+1)+...+s[j]*p^i mod m
+        // hash[i..j]*p^i=hash[0..j]-hash[0..i-1] mod m
+        // we have to calculate modular multiplicative inverse of p^i
+        // now its clear if we can precompute mmi of p^i and hash of each prefix string
+        // then we can calculate hash of every substring in O(1)
+        // we can calculate mmi of p^i with fermat little theorem (only when m is prime
+        // )
+        // mmi_of_p^i=pow(p^i,m-2,m) TC=O(long(m))
+        // its not neccessary to calculate mmi_of_p^1 fir comparing two substring hash
+        // we can multiply smaller p^i to make hash multiple of same power of p
+        // probability of collision 1/m only for (best prime)1e9+9
+        long hash = 0;
+        long p = 31, m = 1000000000 + 9, p_pow = 1;
+        for (int i = 0; i < s.length(); i++) {
+            hash = (hash + (int) s.charAt(i) * p_pow) % m;
+            p_pow = p_pow * p;
         }
-        return st.nextToken();
-    }
-    public static byte nextByte() throws IOException {
-        return Byte.parseByte(nextToken());
+        return hash;
     }
 
-    public static short nextShort() throws IOException {
-        return Short.parseShort(nextToken());
-    }
-
-    public static char nextChar() throws IOException {
-        return nextToken().charAt(0);
-    }
-
-    public static int nextInt() throws IOException {
-        return Integer.parseInt(nextToken());
-    }
-
-    public static long nextLong() throws IOException {
-        return Long.parseLong(nextToken());
-    }
-
-    public static float nextFloat() throws IOException {
-        return Float.parseFloat(nextToken());
-    }
-
-    public static double nextDouble() throws IOException {
-        return Double.parseDouble(nextToken());
-    }
-
-    public static boolean nextBoolean() throws IOException {
-        return Boolean.parseBoolean(nextToken());
-    }
-
-    public static String next() throws IOException {
-        return nextToken();
-    }
-
-    public static String nextLine() throws IOException {
-        st = null; // reset tokenizer to force full line read
-        return br.readLine();
-    }
-
-    public static boolean hasNext() throws IOException {
-        while (st == null || !st.hasMoreTokens()) {
-            String line = br.readLine();
-            if (line == null)
-                return false;
-            st = new StringTokenizer(line);
+    public static ArrayList<Integer> rabinKarp(String s, String t) {
+        // RabinKarp algorith is based on string hashing
+        // its use to search matching word
+        long p = 257, mod = (long) (1e9 + 9);// for taking the value of p=31,53,131,137 etc
+        ArrayList<Integer> ans = new ArrayList<>();
+        int n = s.length(), m = t.length();
+        if (n > m)
+            return ans;
+        long[] p_pow = new long[m];
+        p_pow[0] = 1;
+        long[] hash = new long[m];
+        hash[0] = (int) t.charAt(0) % mod;
+        for (int i = 1; i < m; i++) {
+            p_pow[i] = p_pow[i - 1] * p % mod;
         }
-        return true;
-    }
-
-    public static ArrayList<Integer> nextIntArrayList() {
-        ArrayList<Integer> list = new ArrayList<>();
-        while (sc.hasNextInt()) {
-            list.add(sc.nextInt());
+        for (int i = 1; i < m; i++) {
+            hash[i] = (hash[i - 1] + (int) t.charAt(i) * p_pow[i] % mod) % mod;
         }
-        return list;
-    }
-    public static ArrayList<String> nextStringArrayList() {
-        ArrayList<String> list = new ArrayList<>();
-        while (sc.hasNext()) {      
-            list.add(sc.next());
+        long phash = 0;
+        for (int i = 0; i < n; i++) {
+            phash = (phash + (int) s.charAt(i) * p_pow[i] % mod) % mod;
         }
-        return list;    
-    }
-}
-
-
-class SetCP<T extends Comparable<T>> implements Iterable<T> {
-    private TreeSet<T> treeSet;
-    private HashSet<T> hashSet;
-    private TreeMap<T, Integer> multiSet;
-    public enum Type {
-        SORTED_SET,
-        UNORDERED_SET,
-        MULTISET
-    }
-    private Type type;
-    public SetCP(Type type) {
-        this.type = type;
-        switch (type) {
-            case SORTED_SET -> treeSet = new TreeSet<>();
-            case UNORDERED_SET -> hashSet = new HashSet<>();
-            case MULTISET -> multiSet = new TreeMap<>();
+        for (int i = 0; i + n - 1 < m; i++) {
+            long cur_hash;
+            if (i == 0)
+                cur_hash = hash[i + n - 1];
+            else
+                cur_hash = (hash[i + n - 1] - hash[i - 1] + mod) % mod;
+            // here iff hassh matched then t.substring(i,i+n).equals(s)
+            // to detech hash collision
+            if (cur_hash == (phash * p_pow[i] % mod) && t.substring(i, i + n).equals(s))
+                ans.add(i);
         }
+        return ans;
     }
 
-    public void add(T val) {
-        switch (type) {
-            case SORTED_SET -> treeSet.add(val);
-            case UNORDERED_SET -> hashSet.add(val);
-            case MULTISET -> multiSet.put(val, multiSet.getOrDefault(val, 0) + 1);
+    public static ArrayList<Integer> kmp(String s, String t) {
+        String temp = s + "#" + t;
+        int n = s.length();
+        int[] pi = prefixFunction(temp);
+        ArrayList<Integer> ans = new ArrayList<>();
+        for (int i = n + 1; i < temp.length(); i++) {
+            if (pi[i] == s.length())
+                ans.add(i - 2 * n);
         }
+        return ans;
     }
 
-    public void remove(T val) {
-        switch (type) {
-            case SORTED_SET -> treeSet.remove(val);
-            case UNORDERED_SET -> hashSet.remove(val);
-            case MULTISET -> {
-                if (multiSet.containsKey(val)) {
-                    int count = multiSet.get(val);
-                    if (count == 1) multiSet.remove(val);
-                    else multiSet.put(val, count - 1);
+    public static int countDistinctSubstring(String s) {
+        // Time Complexity O(n^2)
+        // This can we solved in O(nlogn) with suffix array or O(n) with suffix tree
+        // so here logic is very simple callculate the hash of each substring O(n^2)
+        // and count the unique hash that is the distinct nuber of substring
+        //
+        int n = s.length(), p = 257;
+        int m = (int) (1e9 + 9);
+        long[] p_pow = new long[n];
+        long[] hash = new long[n];
+        HashSet<Long> st = new HashSet<>();
+        p_pow[0] = 1;
+        for (int i = 1; i < n; i++) {
+            p_pow[i] = p_pow[i - 1] * p % m;
+        }
+        hash[0] = (int) s.charAt(0);
+        for (int i = 1; i < n; i++) {
+            hash[i] = (hash[i - 1] + (int) s.charAt(i) * p_pow[i] % m) % m;
+        }
+        for (int i = 0; i < n; i++) {
+            for (int j = i; j < n; j++) {
+                long cur_hash;
+                if (i == 0) {
+                    cur_hash = hash[j];
+                } else {
+                    cur_hash = (hash[j] - hash[i - 1] + m) % m;
                 }
+                // here for each substring hash we are normalising hash
+                // since hash[j]-hash[i-1]=hash[j-i]*p^i mod m
+                // (hash[j]-hash[i-1])*p^(n-i-1)=hash[j-i]*p^(n-1) mod m
+                // so for each substring hash is normalise with p^(n-1)
+                cur_hash = cur_hash * p_pow[n - 1 - i] % m;
+                st.add(cur_hash);
             }
         }
+        return st.size() + 1;
     }
 
-    // Check if element exists
-    public boolean contains(T val) {
-        return switch (type) {
-            case SORTED_SET -> treeSet.contains(val);
-            case UNORDERED_SET -> hashSet.contains(val);
-            case MULTISET -> multiSet.containsKey(val);
-        };
-    }
-
-    // Get frequency (only valid for multiset)
-    public int count(T val) {
-        if (type == Type.MULTISET) {
-            return multiSet.getOrDefault(val, 0);
+    public static int[] prefixFunction(String s) {
+        /*
+         * The prefix function for the string is defined as an array pi of length n
+         * where
+         * pi[i] is the length of the longest proper prefix of the substring s[0..i]
+         * wich is also suffix of substring
+         * A proper prefix of a string is a prefix that is not equal to the string
+         * itself
+         * ## A proper prefix of a string is a prefix that is not equal to the string
+         * itself
+         * 
+         * Observation 1: the values of the prefix function can only increase by at most
+         * one or decrease by some amount.
+         * .....................................................
+         * 
+         * kmp algorithm ==> prefix function ==> (s+"#"+text)
+         * count all pi[i] with value n=s.length() and indexOf(s) will be i-2*n
+         */
+        int n = s.length();
+        int[] pi = new int[n];
+        for (int i = 1; i < n; i++) {
+            int j = pi[i - 1];
+            while (j > 0 && s.charAt(i) != s.charAt(j))
+                j = pi[j - 1];
+            if (s.charAt(i) == s.charAt(j))
+                j++;
+            pi[i] = j;
         }
-        return contains(val) ? 1 : 0;
+        return pi;
     }
 
-    // Get size
-    public int size() {
-        return switch (type) {
-            case SORTED_SET -> treeSet.size();
-            case UNORDERED_SET -> hashSet.size();
-            case MULTISET -> multiSet.values().stream().mapToInt(i -> i).sum();
-        };
-    }
-    // Get first element (for TreeSet or MultiSet)
-    public T first() {
-        return switch (type) {
-            case SORTED_SET -> treeSet.first();
-            case MULTISET -> multiSet.firstKey();
-            default -> throw new UnsupportedOperationException("first() not supported for unordered_set");
-        };
-    }
-
-    // Get last element
-    public T last() {
-        return switch (type) {
-            case SORTED_SET -> treeSet.last();
-            case MULTISET -> multiSet.lastKey();
-            default -> throw new UnsupportedOperationException("last() not supported for unordered_set");
-        };
-    }
-
-    // Clear all elements
-    public void clear() {
-        switch (type) {
-            case SORTED_SET -> treeSet.clear();
-            case UNORDERED_SET -> hashSet.clear();
-            case MULTISET -> multiSet.clear();
-        }
-    }
-
-    // Debug print
-    public void print() {
-        switch (type) {
-            case SORTED_SET -> System.out.println(treeSet);
-            case UNORDERED_SET -> System.out.println(hashSet);
-            case MULTISET -> {
-                List<T> list = new ArrayList<>();
-                for (Map.Entry<T, Integer> entry : multiSet.entrySet()) {
-                    list.addAll(Collections.nCopies(entry.getValue(), entry.getKey()));
-                }
-                System.out.println(list);
+    public static int[] zFunction(String s) {
+        // z[i]=length of the longest substring starting at i which is also a prefix of
+        // s
+        // so z[0] will be s.length() but we assume it as 0
+        //
+        int n = s.length();
+        int[] z = new int[n];
+        int l = 0, r = 0;
+        // [l, r) is rightmost segment match with prefix
+        for (int i = 1; i < n; i++) {
+            if (i < r) {
+                z[i] = min(r - i, z[i - l]);
+                // s="aaaabcaa"
+                // this string example show why min(r-i,z[i-l])
+            }
+            while (i + z[i] < n && s.charAt(z[i]) == s.charAt(i + z[i])) {
+                z[i]++;
+            }
+            if (i + z[i] > r) {
+                l = i;
+                r = i + z[i];
             }
         }
+        return z;
     }
 
-    @Override
-    public Iterator<T> iterator() {
-        return switch (type) {
-            case SORTED_SET -> treeSet.iterator();
-            case UNORDERED_SET -> hashSet.iterator();
-            case MULTISET -> {
-                // Expand multiset into a list of repeated elements
-                List<T> list = new ArrayList<>();
-                for (Map.Entry<T, Integer> entry : multiSet.entrySet()) {
-                    list.addAll(Collections.nCopies(entry.getValue(), entry.getKey()));
-                }
-                yield list.iterator();
-            }
-        };
-    }
-}
-
-class Shell {
-    public static void cmd() {
-        try {
-            String command = Io.nextLine();
-            ProcessBuilder builder = new ProcessBuilder("bash", "-ic",command);
-            builder.redirectErrorStream(true);
-            Process process = builder.start();
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                Io.outln(line);
-            }
-            int exitCode = process.waitFor();
-            Io.outln("Exited with code: " + exitCode);
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
 }
