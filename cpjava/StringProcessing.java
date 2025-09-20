@@ -2,6 +2,7 @@ package cpjava;
 import java.util.ArrayList;
 import java.util.HashSet;
 import static java.lang.Math.*;
+import java.util.Arrays;
 
 public class StringProcessing {
 
@@ -166,6 +167,82 @@ public class StringProcessing {
         }
         return z;
     }
+}
 
 
+class PrefixDoublingSuffixArray {
+    /*
+     * ✅ 1. What is a Suffix Array?
+     * A suffix array is an array of integers that shows the starting positions of
+     * all suffixes of a string in sorted order.
+     * 
+     * 
+     * ✅ 2. What is an LCP Array?
+     * LCP = Longest Common Prefix
+     *
+     * The LCP Array tells us how much two consecutive suffixes (in the suffix
+     * array) have in common at the beginning.
+     * 
+     * 
+     */
+    static class Suffix implements Comparable<Suffix> {
+        int index;
+        int rank;
+        int nextRank;
+        Suffix(int i, int r, int nr) {
+            index = i;
+            rank = r;
+            nextRank = nr;
+        }
+        public int compareTo(Suffix s) {
+            if (this.rank != s.rank)
+                return Integer.compare(this.rank, s.rank);
+            return Integer.compare(this.nextRank, s.nextRank);
+        }
+    }
+
+    public static int[] buildSuffixArray(String s) {
+        int n = s.length();
+        Suffix[] suffixes = new Suffix[n];
+        // Step 1: Initial ranking based on first 2 characters
+        for (int i = 0; i < n; i++) {
+            int next = (i + 1 < n) ? s.charAt(i + 1) : -1;
+            suffixes[i] = new Suffix(i, s.charAt(i), next);
+        }
+        Arrays.sort(suffixes);
+        // At this point we start doubling
+        int[] indices = new int[n]; // to map original index of suffix to its position in suffixes[]
+        
+        for (int k = 4; k < 2 * n; k *= 2) {
+            int rank = 0;
+            int prev_rank = suffixes[0].rank;
+            suffixes[0].rank = rank;
+            indices[suffixes[0].index] = 0;
+
+            // Assign ranks
+            for (int i = 1; i < n; i++) {
+                if (suffixes[i].rank == prev_rank && suffixes[i].nextRank == suffixes[i - 1].nextRank) {
+                    prev_rank = suffixes[i].rank;
+                    suffixes[i].rank = rank;
+                } else {
+                    prev_rank = suffixes[i].rank;
+                    suffixes[i].rank = ++rank;
+                }
+                indices[suffixes[i].index] = i;
+            }
+
+            // Assign next rank
+            for (int i = 0; i < n; i++) {
+                int nextIndex = suffixes[i].index + k / 2;
+                suffixes[i].nextRank = (nextIndex < n) ? suffixes[indices[nextIndex]].rank : -1;
+            }
+            Arrays.sort(suffixes);
+        }
+        // Extract suffix array
+        int[] suffixArr = new int[n];
+        for (int i = 0; i < n; i++) {
+            suffixArr[i] = suffixes[i].index;
+        }
+        return suffixArr;
+    }
 }
