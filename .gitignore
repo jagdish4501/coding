@@ -1,1 +1,4 @@
+out/
+input.txt
+output.txt
 *.class
