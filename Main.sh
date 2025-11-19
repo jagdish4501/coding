@@ -1,1 +1,1 @@
-echo 'hello from bash script'
+echo "hello world from bash"
